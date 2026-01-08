@@ -1,4 +1,47 @@
 import { NestFactory } from '@nestjs/core';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices'; // <--- CAMBIO: Importar opciones de microservicio
+import { AppModule } from './app.module';
+import { Logger } from '@nestjs/common';
+
+async function bootstrap() {
+  const logger = new Logger('Auth-Microservice');
+
+  // 1. CAMBIO: En lugar de NestFactory.create (HTTP), usamos createMicroservice (TCP)
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
+    transport: Transport.TCP,
+    options: {
+      host: 'localhost', // O '0.0.0.0' si usas Docker
+      port: 3001,        // El puerto que el Gateway tiene configurado
+    },
+  });
+
+  // 2. Escuchamos las peticiones TCP
+  await app.listen();
+
+  logger.log('Microservicio de Auth (TCP) listo en el puerto 3001');
+}
+
+bootstrap();
+/*
+import { NestFactory } from '@nestjs/core';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
+    transport: Transport.TCP,
+    options: {
+      host: 'localhost',
+      port: 3001, // El puerto que definiste en el Gateway
+    },
+  });
+  await app.listen();
+  console.log('Microservicio de Auth (TCP) listo');
+}
+bootstrap();
+*/
+/*
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 
@@ -35,3 +78,4 @@ async function bootstrap() {
 }
 
 bootstrap();
+*/
