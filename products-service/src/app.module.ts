@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { databaseConfig } from './database/database.config';
-import { StallsModule } from './stalls/stalls.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
-    // Configuración global de la base de datos stalls_service
+    // Configuración de TypeORM para la base de datos de productos
     TypeOrmModule.forRoot(databaseConfig),
 
-    // Módulo que contiene la lógica de los puestos gastronómicos
-    StallsModule,
+    // Módulo de gestión de catálogo
+    ProductsModule,
   ],
   controllers: [],
   providers: [],
