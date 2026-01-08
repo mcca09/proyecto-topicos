@@ -9,31 +9,28 @@ import * as bcrypt from 'bcrypt';
 export class AuthService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
-    private jwtService: JwtService,
+    private readonly userRepository: Repository<User>,
+    private readonly jwtService: JwtService,
   ) {}
 
+  async register(userData: Record<string, any>): Promise<User> {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(userData.passwordHash, salt);
+    const newUser = this.userRepository.create({
+      ...userData,
+      passwordHash: hashedPassword,
+    });
+    return await this.userRepository.save(newUser);
+  }
+
   async login(email: string, pass: string) {
-    // Buscar usuario por email según la tabla users
-    const user = await this.usersRepository.findOne({ where: { email } });
-
-    // Comparar contraseña usando bcrypt
-    if (user && (await bcrypt.compare(pass, user.passwordHash))) {
-      const payload = {
-        sub: user.id,
-        email: user.email,
-        role: user.role, // Incluimos el rol solicitado
-      };
-
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (user && await bcrypt.compare(pass, user.passwordHash)) {
+      const payload = { id: user.id, email: user.email, role: user.role };
       return {
         access_token: this.jwtService.sign(payload),
-        user: {
-          fullName: user.fullName, // Antes era full_name
-          role: user.role,
-        },
       };
     }
-
     throw new UnauthorizedException('Credenciales incorrectas');
   }
 }

@@ -7,7 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // 1. Configuración de prefijo global (Opcional pero recomendado para el Gateway)
-  // Esto hará que tus rutas empiecen por http://localhost:3001/api/auth/...
+  // Esto hará que tus rutas empiecen por htnpm run start:devtp://localhost:3001/api/auth/...
   app.setGlobalPrefix('api');
 
   // 2. Validación global de DTOs

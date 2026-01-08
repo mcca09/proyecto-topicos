@@ -12,9 +12,9 @@ import { UsersModule } from '../users/users.module';
   imports: [
     UsersModule,
     PassportModule,
-    TypeOrmModule.forFeature([User]), // Permite usar la tabla users
+    TypeOrmModule.forFeature([User]),
     JwtModule.register({
-      secret: 'CLAVE_SECRETA_FERIA_2024', // En producción usar variables de entorno
+      secret: 'password',
       signOptions: { expiresIn: '1h' },
     }),
   ],
