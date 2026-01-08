@@ -6,12 +6,15 @@ import {
   UseGuards, 
   Req, 
   Inject, 
-  Patch 
+  Patch,
+  HttpException,
+  HttpStatus
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { catchError, firstValueFrom } from 'rxjs';
 
-@Controller('auth') // Ruta: http://localhost:3000/api/auth
+@Controller('auth')
 export class AuthController {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
@@ -19,41 +22,53 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() registerDto: any) {
-    // Envía los datos de registro al microservicio de Auth
     return this.authClient.send({ cmd: 'register' }, registerDto);
   }
 
   @Post('login')
   async login(@Body() loginDto: any) {
-    // Envía credenciales y recibe el access_token
-    return this.authClient.send({ cmd: 'login' }, loginDto);
+    // Usamos firstValueFrom para manejar la respuesta como Promesa y capturar errores
+    return firstValueFrom(
+      this.authClient.send({ cmd: 'login' }, loginDto).pipe(
+        catchError(val => {
+          throw new HttpException('Error en el microservicio de Auth', HttpStatus.INTERNAL_SERVER_ERROR);
+        })
+      )
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async getProfile(@Req() req: any) {
-    // req.user contiene el payload decodificado del JWT
-    return this.authClient.send({ cmd: 'get_profile' }, { user: req.user });
+    const userId = req.user?.id;
+    return this.authClient.send({ cmd: 'get_profile' }, { id: userId });
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('profile')
   async updateProfile(@Req() req: any, @Body() updateData: any) {
     /**
-     * SOLUCIÓN AL ERROR 500: "Empty criteria(s)"
-     * Extraemos el identificador único del usuario. 
-     * Verificamos 'id' y 'sub' para asegurar que nunca viaje vacío.
+     * SOLUCIÓN AL ECONNRESET:
+     * Extraemos el ID del token. Si req.user.id es null, el microservicio colapsa.
      */
-    const userId = req.user.id || req.user.sub;
+    const userId = req.user?.id;
 
-    // Enviamos un objeto estructurado: 
-    // 'id' para el WHERE de la base de datos y 'updateData' con los cambios.
+    if (!userId) {
+      throw new HttpException('No se encontró el ID del usuario en el token', HttpStatus.UNAUTHORIZED);
+    }
+
+    // Enviamos el objeto estructurado
     return this.authClient.send(
       { cmd: 'update_profile' }, 
       { 
         id: userId, 
         updateData: updateData 
       }
+    ).pipe(
+      catchError(err => {
+        // Esto evita que el Gateway lance el error de socket crudo
+        throw new HttpException('Error de comunicación con Auth-Service', HttpStatus.SERVICE_UNAVAILABLE);
+      })
     );
   }
 }
