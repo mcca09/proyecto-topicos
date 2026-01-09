@@ -1,8 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Stall } from './stalls.entity';
-import { CreateStallDto } from './create-stall.dto';
 
 @Injectable()
 export class StallsService {
@@ -11,19 +10,21 @@ export class StallsService {
     private readonly stallRepository: Repository<Stall>,
   ) {}
 
-  async create(createStallDto: CreateStallDto): Promise<Stall> {
-    const newStall = this.stallRepository.create({
-      ...createStallDto,
-      status: 'pendiente', // Todo puesto nuevo inicia como pendiente
-    });
-    return await this.stallRepository.save(newStall);
+  async create(data: any) {
+    try {
+      const newStall = this.stallRepository.create(data);
+      return await this.stallRepository.save(newStall);
+    } catch (error) {
+      console.error('Error en Microservicio Stalls:', error.message);
+      throw new InternalServerErrorException('Error al insertar en la base de datos');
+    }
   }
 
-  async findAll(): Promise<Stall[]> {
+  async findAll() {
     return await this.stallRepository.find();
   }
 
-  async findOne(id: string): Promise<Stall | null> {
-    return await this.stallRepository.findOneBy({ id });
+  async findOne(id: string) {
+    return await this.stallRepository.findOne({ where: { id } });
   }
 }

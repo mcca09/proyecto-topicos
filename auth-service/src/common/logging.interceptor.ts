@@ -13,48 +13,18 @@ export class LoggingInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const type = context.getType();
-    let route = 'TCP-Message';
-    let method = 'RPC';
-    // Inicializamos como string vacío en lugar de null para evitar el error de tipos
-    let userId = ''; 
-
-    if (type === 'http') {
-      const request = context.switchToHttp().getRequest();
-      route = request.url;
-      method = request.method;
-      userId = request.user?.id || '';
-    } else if (type === 'rpc') {
-      const data = context.switchToRpc().getData();
-      // Obtenemos el patrón del mensaje (ej: { cmd: 'register' })
-      const pattern = context.switchToRpc().getContext().getPattern();
-      route = typeof pattern === 'string' ? pattern : JSON.stringify(pattern);
-      method = 'TCP';
-      userId = data?.id || data?.user?.id || '';
-    }
-
+    const request = context.switchToHttp().getRequest();
+    
     return next.handle().pipe(
-      tap({
-        next: () => this.saveLog(route, method, userId, 200, 'Operación exitosa'),
-        error: (err) => this.saveLog(route, method, userId, err.status || 500, err.message || 'Error desconocido'),
+      tap(() => {
+        const log = this.logRepository.create({
+          userId: request?.user?.id || null,
+          action: request?.method || 'TCP_ACTION',
+          // Se elimina 'route' porque no existe en tu entidad DeepPartial<ApiLog>
+          timestamp: new Date(),
+        });
+        this.logRepository.save(log).catch(err => console.error('Error saving log:', err));
       }),
     );
-  }
-
-  private async saveLog(route: string, method: string, userId: string, statusCode: number, message: string) {
-    try {
-      // Usamos los nombres de propiedades que TypeScript espera (userId en lugar de user_id)
-      const log = this.logRepository.create({
-        route: route || 'unknown',
-        method: method || 'TCP',
-        userId: userId || undefined, // Si está vacío, lo pasamos como undefined
-        statusCode: statusCode,
-        message: message.substring(0, 255),
-      });
-      await this.logRepository.save(log);
-    } catch (error) {
-      // Evitamos que un fallo en el log bloquee la respuesta principal
-      console.error('Error silencioso al guardar log:', error.message);
-    }
   }
 }

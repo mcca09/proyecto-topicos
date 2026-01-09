@@ -1,39 +1,34 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { LoggingInterceptor } from './common/logging.interceptor';
-import { HttpExceptionFilter } from './common/http-exception.filter';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 
 async function bootstrap() {
-  // Crea la instancia de la aplicación NestJS
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Orders-Microservice');
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+    AppModule,
+    {
+      transport: Transport.TCP,
+      options: {
+        host: 'localhost',
+        port: 3002,
+      },
+    },
+  );
 
-  // Prefijo global para todas las rutas: http://localhost:3004/api/orders
-  app.setGlobalPrefix('api');
-
-  // Configuración de ValidationPipe para procesar los DTOs (CreateOrderDto)
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Remueve propiedades que no estén en el DTO
-      forbidNonWhitelisted: true, // Lanza error si hay propiedades no permitidas
-      transform: true, // Convierte los tipos de datos automáticamente
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 
-  // Filtro global para manejar errores de HTTP de forma estandarizada
-  app.useGlobalFilters(new HttpExceptionFilter());
-
-  // Interceptor global para registrar logs en la base de datos orders_service
-  const dataSource = app.get(DataSource);
-  app.useGlobalInterceptors(new LoggingInterceptor(dataSource));
-
-  // Definición del puerto desde variables de entorno o por defecto 3004
-  const PORT = process.env.PORT || 3004;
-
-  await app.listen(PORT);
-
-  console.log(`🚀 Microservicio de Pedidos corriendo en: http://localhost:${PORT}/api`);
+  await app.listen();
+  logger.log('Orders-Service (TCP) ready on port 3002');
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

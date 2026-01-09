@@ -3,7 +3,7 @@ import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 export class CreateStallDto {
   @IsUUID()
   @IsNotEmpty({ message: 'El ID del propietario es obligatorio' })
-  owner_id: string;
+  ownerId: string; // Cambiado para coincidir con el envío del Gateway
 
   @IsString()
   @IsNotEmpty({ message: 'El nombre del puesto es obligatorio' })

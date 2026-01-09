@@ -1,27 +1,40 @@
 import { Module } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { JwtStrategy } from './jwt.strategy';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
 
 @Module({
   imports: [
-    // Registramos el cliente para comunicarnos con el microservicio de Auth
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'password',
+        signOptions: { expiresIn: '24h' },
+      }),
+    }),
     ClientsModule.registerAsync([
       {
-        name: 'AUTH_SERVICE', // Nombre que usaremos para inyectar el cliente
+        name: 'AUTH_SERVICE',
         imports: [ConfigModule],
         inject: [ConfigService],
         useFactory: (configService: ConfigService) => ({
           transport: Transport.TCP,
           options: {
-            // Valores obtenidos del archivo .env
-            host: configService.get('AUTH_SERVICE_HOST', 'localhost'),
-            port: configService.get('AUTH_SERVICE_PORT', 3001),
+            host: configService.get('AUTH_HOST') || 'localhost',
+            port: configService.get('AUTH_PORT') || 3001,
           },
         }),
       },
     ]),
   ],
   controllers: [AuthController],
+  providers: [AuthService, JwtStrategy],
+  exports: [AuthService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}

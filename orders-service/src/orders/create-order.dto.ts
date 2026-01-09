@@ -18,7 +18,7 @@ class OrderItemDto {
 export class CreateOrderDto {
   @IsUUID()
   @IsNotEmpty()
-  customer_id: string;
+  customer_id: string; // El Gateway mapeará req.user.id aquí
 
   @IsUUID()
   @IsNotEmpty()

@@ -6,22 +6,19 @@ export class Product {
   id: string;
 
   @Column({ type: 'uuid' })
-  stall_id: string; // Relación lógica con el stalls-service
+  stall_id: string;
 
-  @Column({ length: 255 })
+  @Column()
   name: string;
 
-  @Column({ type: 'numeric', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
 
-  @Column({ length: 100 })
-  category: string;
+  @Column({ type: 'text', nullable: true })
+  description: string;
 
-  @Column({ type: 'int' })
-  stock: number; // Debe ser >= 0
-
-  @Column({ name: 'is_available', default: true })
-  isAvailable: boolean;
+  @Column({ type: 'int', default: 0 })
+  stock: number;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

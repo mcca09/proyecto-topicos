@@ -1,29 +1,16 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Catch, RpcExceptionFilter, ArgumentsHost } from '@nestjs/common';
+import { Observable, throwError } from 'rxjs';
+import { RpcException } from '@nestjs/microservices';
 
 @Catch()
-export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: unknown, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
-
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
-
-    const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : 'Internal server error';
-
-    // Estructura de error limpia para el API Gateway
-    response.status(status).json({
-      statusCode: status,
+export class HttpExceptionFilter implements RpcExceptionFilter<RpcException> {
+  catch(exception: any, host: ArgumentsHost): Observable<any> {
+    const errorResponse = {
+      statusCode: exception?.status || 500,
       timestamp: new Date().toISOString(),
-      path: request.url,
-      message: typeof message === 'object' ? (message as any).message : message,
-    });
+      message: exception?.response?.message || exception?.message || 'Internal server error',
+    };
+
+    return throwError(() => errorResponse);
   }
 }

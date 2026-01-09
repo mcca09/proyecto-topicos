@@ -1,65 +1,44 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Order } from './order.entity';
-import { OrderItem } from './order-item.entity';
-import { CreateOrderDto } from './create-order.dto';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
-    private dataSource: DataSource,
   ) {}
 
-  async create(createOrderDto: CreateOrderDto): Promise<Order> {
-    const { items, ...orderData } = createOrderDto;
+  async create(data: any) {
+    const { items, customer_id } = data;
 
-    // Calcular el total de la orden
-    const total = items.reduce((acc, item) => acc + (item.unit_price * item.quantity), 0);
+    // Calculamos el total asegurando que los valores sean números
+    const totalAmount = items.reduce((acc: number, item: any) => {
+      return acc + (Number(item.price) * Number(item.quantity));
+    }, 0);
 
-    // Iniciar transacción
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      const order = queryRunner.manager.create(Order, {
-        ...orderData,
-        total,
-        status: 'pendiente',
-      });
-      const savedOrder = await queryRunner.manager.save(order);
-
-      const orderItems = items.map(item => {
-        return queryRunner.manager.create(OrderItem, {
-          ...item,
-          order: savedOrder,
-        });
-      });
-      await queryRunner.manager.save(orderItems);
-
-      await queryRunner.commitTransaction();
-      return this.findOne(savedOrder.id);
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
-  }
-
-  async findAll(): Promise<Order[]> {
-    return await this.orderRepository.find({ relations: ['items'] });
-  }
-
-  async findOne(id: string): Promise<Order> {
-    const order = await this.orderRepository.findOne({
-      where: { id },
-      relations: ['items']
+    // Creamos la orden vinculando el ID del cliente a la propiedad de la entidad
+    const newOrder = this.orderRepository.create({
+      userId: customer_id, 
+      stallId: items[0]?.stallId,
+      total: totalAmount,
+      status: 'pendiente',
+      items: items.map((item: any) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+      })),
     });
-    if (!order) throw new NotFoundException('Pedido no encontrado');
-    return order;
+
+    // Esto guardará en la tabla 'orders' y en 'order_items' por el cascade
+    return await this.orderRepository.save(newOrder);
+  }
+
+  async findAllByUser(customer_id: string) {
+    return await this.orderRepository.find({
+      where: { userId: customer_id },
+      relations: ['items'],
+    });
   }
 }

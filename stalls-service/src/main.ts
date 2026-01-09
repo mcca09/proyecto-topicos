@@ -1,40 +1,34 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { LoggingInterceptor } from './common/logging.interceptor';
-import { HttpExceptionFilter } from './common/http-exception.filter';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 
 async function bootstrap() {
-  // Crea la instancia de la aplicación basada en el AppModule
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Stalls-Microservice');
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+    AppModule,
+    {
+      transport: Transport.TCP,
+      options: {
+        host: 'localhost',
+        port: 3004,
+      },
+    },
+  );
 
-  // 1. Configuración de prefijo global (Rutas: http://localhost:3002/api/...)
-  app.setGlobalPrefix('api');
-
-  // 2. Configuración de Validaciones Globales (Uso de DTOs)
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Elimina campos que no estén en el DTO
-      forbidNonWhitelisted: true, // Lanza error si envían campos extra
-      transform: true, // Transforma tipos automáticamente (ej. string a number)
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 
-  // 3. Filtro de Excepciones Global (AOP)
-  app.useGlobalFilters(new HttpExceptionFilter());
-
-  // 4. Interceptor de Logs Global (AOP)
-  // Obtenemos el DataSource de la base de datos para pasarlo al interceptor
-  const dataSource = app.get(DataSource);
-  app.useGlobalInterceptors(new LoggingInterceptor(dataSource));
-
-  // 5. Configuración del puerto del microservicio
-  const PORT = 3002;
-  await app.listen(PORT);
-
-  console.log(
-    `🚀 Microservicio de Puestos ejecutándose en: http://localhost:${PORT}/api`,
-  );
+  await app.listen();
+  logger.log('Stalls-Service (TCP) ready on port 3004');
 }
-bootstrap();
+
+bootstrap().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

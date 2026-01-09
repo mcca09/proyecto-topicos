@@ -1,23 +1,20 @@
-import { Controller, Get, Post, Body, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './create-order.dto';
 
-@Controller('orders')
+@Controller()
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(createOrderDto);
+  @MessagePattern({ cmd: 'create_order' })
+  create(@Payload() data: any) {
+    return this.ordersService.create(data);
   }
 
-  @Get()
-  findAll() {
-    return this.ordersService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.ordersService.findOne(id);
+  @MessagePattern({ cmd: 'get_user_orders' })
+  findAllByUser(@Payload() data: any) {
+    // Accedemos a customer_id que viene en el payload
+    const customer_id = data.customer_id;
+    return this.ordersService.findAllByUser(customer_id); 
   }
 }

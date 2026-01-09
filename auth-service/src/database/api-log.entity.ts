@@ -1,25 +1,16 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 
-@Entity('api_logs', { schema: 'public' })
+@Entity('api_logs')
 export class ApiLog {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ type: 'varchar', length: 255 })
-  route: string;
+  @Column({ nullable: true })
+  userId: string;
 
-  @Column({ type: 'varchar', length: 20 })
-  method: string;
+  @Column()
+  action: string;
 
-  @Column({ name: 'user_id', type: 'uuid', nullable: true })
-  userId?: string;
-
-  @CreateDateColumn({ type: 'timestamp', default: () => 'NOW()' })
+  @CreateDateColumn()
   timestamp: Date;
-
-  @Column({ name: 'status_code', type: 'int' })
-  statusCode: number;
-
-  @Column({ type: 'text', nullable: true })
-  message: string;
 }

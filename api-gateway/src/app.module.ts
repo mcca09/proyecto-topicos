@@ -1,35 +1,21 @@
 import { Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { AuthController } from './auth/auth.controller';
-import { JwtStrategy } from './auth/jwt.strategy';
+import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
+import { ProductsModule } from './products/products.module';
+import { OrdersModule } from './orders/orders.module';
+import { StallsModule } from './stalls/stalls.module';
 
 @Module({
   imports: [
-    // Registro de Passport para usar la estrategia JWT
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-
-    // Configuración del JWT: El secreto DEBE ser 'password'
-    JwtModule.register({
-      secret: 'password', 
-      signOptions: { expiresIn: '1h' }, 
+    ConfigModule.forRoot({
+      isGlobal: true,
     }),
-
-    // Configuración del Cliente para conectar con el Microservicio de Auth
-    ClientsModule.register([
-      {
-        name: 'AUTH_SERVICE', // Nombre usado en @Inject() del controlador
-        transport: Transport.TCP,
-        options: {
-          host: 'localhost',
-          port: 3001, // Puerto del microservicio TCP
-        },
-      },
-    ]),
+    AuthModule,
+    ProductsModule,
+    OrdersModule,
+    StallsModule,
   ],
-  controllers: [AuthController],
-  providers: [JwtStrategy], // La lógica para validar el token
-  exports: [JwtStrategy, PassportModule],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

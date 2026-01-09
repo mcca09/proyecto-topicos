@@ -1,28 +1,24 @@
-import { Controller, Get, Post, Body, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './create-product.dto';
 
-@Controller('products')
+@Controller()
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  @Post()
-  create(@Body() createProductDto: CreateProductDto) {
+  @MessagePattern({ cmd: 'create_product' })
+  create(@Payload() createProductDto: CreateProductDto) {
     return this.productsService.create(createProductDto);
   }
 
-  @Get()
+  @MessagePattern({ cmd: 'find_all_products' })
   findAll() {
     return this.productsService.findAll();
   }
 
-  @Get('stall/:stallId')
-  findByStall(@Param('stallId', ParseUUIDPipe) stallId: string) {
-    return this.productsService.findByStall(stallId);
-  }
-
-  @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  @MessagePattern({ cmd: 'find_one_product' })
+  findOne(@Payload() id: string) {
     return this.productsService.findOne(id);
   }
 }

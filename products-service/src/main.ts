@@ -1,17 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { LoggingInterceptor } from './common/logging.interceptor';
-import { HttpExceptionFilter } from './common/http-exception.filter';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Products-Microservice');
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+    AppModule,
+    {
+      transport: Transport.TCP,
+      options: {
+        host: 'localhost',
+        port: 3003,
+      },
+    },
+  );
 
-  // Prefijo global para las rutas: http://localhost:3003/api/...
-  app.setGlobalPrefix('api');
-
-  // Habilitar validaciones para los DTOs (CreateProductDto)
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -20,17 +24,11 @@ async function bootstrap() {
     }),
   );
 
-  // Aplicar Filtro de Excepciones global
-  app.useGlobalFilters(new HttpExceptionFilter());
-
-  // Aplicar Interceptor de Logs específico para la base de datos de productos
-  const dataSource = app.get(DataSource);
-  app.useGlobalInterceptors(new LoggingInterceptor(dataSource));
-
-  // IMPORTANTE: Puerto 3003 para evitar conflictos con otros microservicios
-  const PORT = 3003;
-  await app.listen(PORT);
-
-  console.log(`🚀 Microservicio de Productos corriendo en: http://localhost:${PORT}/api`);
+  await app.listen();
+  logger.log('Products-Service (TCP) ready on port 3003');
 }
-bootstrap();
+
+bootstrap().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
